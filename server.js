@@ -6,21 +6,29 @@
   const rateLimit = require("express-rate-limit");
   const { LRUCache } = require("lru-cache");
   const { chromium } = require("playwright-extra");
-  const stealth = require("playwright-extra-plugin-stealth")();
   const pRetry = await import("p-retry").then(mod => mod.default);
 
-  chromium.use(stealth);
+  // ⛑️ Stealth plugin optioneel laden
+  try {
+    const stealth = require("playwright-extra-plugin-stealth")();
+    chromium.use(stealth);
+  } catch (err) {
+    console.warn("⚠️ Stealth plugin not available, continuing without it.");
+  }
 
   const app = express();
 
+  // 🌐 Middleware
   app.use(compression());
   app.use(morgan("tiny"));
   app.use(cors({ origin: "*", methods: ["GET", "OPTIONS"] }));
 
+  // 🩺 Healthcheck
   app.get("/health", (req, res) => {
     res.status(200).json({ ok: true, t: Date.now() });
   });
 
+  // 🚦 Rate limiting
   const limiter = rateLimit({
     windowMs: 60 * 1000,
     max: 60,
@@ -29,8 +37,10 @@
   });
   app.use(limiter);
 
+  // 🧠 Caching
   const cache = new LRUCache({ max: 200, ttl: 5 * 60 * 1000 });
 
+  // 📸 Snapshot endpoint
   app.get("/snapshot", async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) return res.status(400).json({ error: "Missing ?url=" });
@@ -57,7 +67,7 @@
 
           const page = await context.newPage();
 
-          // Simuleer menselijk gedrag
+          // 🕵️ Simuleer menselijk gedrag
           await page.mouse.move(100, 100);
           await page.mouse.wheel({ deltaY: 300 });
           await page.waitForTimeout(500);
@@ -95,6 +105,7 @@
     }
   });
 
+  // 🚀 Start server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`SlothProxyV2 listening on :${PORT}`);
