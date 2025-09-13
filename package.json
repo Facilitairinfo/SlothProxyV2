@@ -1,7 +1,7 @@
 {
   "name": "sloth-proxy-v2",
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "start": "node server.js",
     "dev": "NODE_ENV=development node server.js"
