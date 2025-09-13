@@ -1,0 +1,30 @@
+{
+  "nen_nl": {
+    "label": "NEN Nieuws",
+    "startUrl": "https://www.nen.nl/nieuws",
+    "siteBase": "https://www.nen.nl",
+    "selectors": {
+      "list": "main article",
+      "title": "a",
+      "link": "a",
+      "date": "time",
+      "summary": "p",
+      "image": "img"
+    },
+    "dateFormat": "auto"
+  },
+  "example_site": {
+    "label": "Voorbeeldsite",
+    "startUrl": "https://example.com/news",
+    "siteBase": "https://example.com",
+    "selectors": {
+      "list": "",
+      "title": "",
+      "link": "",
+      "date": "",
+      "summary": "",
+      "image": ""
+    },
+    "dateFormat": "auto"
+  }
+}
