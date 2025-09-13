@@ -16,6 +16,6 @@
     "p-retry": "^6.2.0",
     "playwright": "^1.47.2",
     "playwright-extra": "^4.3.0",
-    "playwright-extra-plugin-stealth": "^2.7.5"
+    "playwright-extra-plugin-stealth": "^2.6.4"
   }
 }
