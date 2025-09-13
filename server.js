@@ -4,17 +4,14 @@
   const compression = require("compression");
   const morgan = require("morgan");
   const rateLimit = require("express-rate-limit");
-  const LRU = require("lru-cache");
+  const { LRUCache } = require("lru-cache");
   const { chromium } = require("playwright");
   const pRetry = await import("p-retry").then(mod => mod.default);
 
   const app = express();
 
-  // --- Basis middleware
   app.use(compression());
   app.use(morgan("tiny"));
-
-  // --- CORS: sta alles toe
   app.use(
     cors({
       origin: "*",
@@ -24,12 +21,10 @@
     })
   );
 
-  // --- Healthcheck
   app.get("/health", (req, res) => {
     res.status(200).json({ ok: true, t: Date.now() });
   });
 
-  // --- Rate limiting
   const limiter = rateLimit({
     windowMs: 60 * 1000,
     max: 60,
@@ -38,13 +33,11 @@
   });
   app.use(limiter);
 
-  // --- Cache
-  const cache = new LRU({
+  const cache = new LRUCache({
     max: 200,
     ttl: 5 * 60 * 1000,
   });
 
-  // --- Snapshot endpoint
   app.get("/snapshot", async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -115,7 +108,6 @@
     }
   });
 
-  // --- Start server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`SlothProxyV2 listening on :${PORT}`);
