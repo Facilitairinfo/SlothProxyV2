@@ -1,166 +1,130 @@
-import express from "express";
-import cors from "cors";
-import compression from "compression";
-import rateLimit from "express-rate-limit";
-import morgan from "morgan";
-import { LRUCache } from "lru-cache";
-import { chromium } from "playwright";
-import pRetry from "p-retry";
+// server.js
+const express = require("express");
+const cors = require("cors");
+const compression = require("compression");
+const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
+const LRU = require("lru-cache");
+const pRetry = require("p-retry");
+const { chromium } = require("playwright");
 
 const app = express();
 
-// ----- Config -----
-const PORT = process.env.PORT || 8080;
-const CACHE_TTL_MS = parseInt(process.env.CACHE_TTL_MS || "900000", 10); // 15 min
-const CACHE_MAX = parseInt(process.env.CACHE_MAX || "500", 10);
-const RENDER_TIMEOUT_MS = parseInt(process.env.RENDER_TIMEOUT_MS || "15000", 10);
-const NAV_TIMEOUT_MS = parseInt(process.env.NAV_TIMEOUT_MS || "20000", 10);
-const RATE_PER_MIN = parseInt(process.env.RATE_PER_MIN || "120", 10);
-const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || "*";
-const WAIT_UNTIL = process.env.WAIT_UNTIL || "networkidle"; // 'load' | 'domcontentloaded' | 'networkidle'
-
-// ----- Middleware -----
-app.use(morgan("tiny"));
-app.use(cors({ origin: ALLOW_ORIGIN }));
+// --- Basis middleware
 app.use(compression());
-app.set("trust proxy", 1);
+app.use(morgan("tiny"));
+
+// --- CORS: sta alles toe (je kunt dit later strakker zetten)
 app.use(
-  rateLimit({
-    windowMs: 60 * 1000,
-    max: RATE_PER_MIN,
-    standardHeaders: true,
-    legacyHeaders: false
+  cors({
+    origin: "*",
+    methods: ["GET", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Accept"],
+    maxAge: 600,
   })
 );
 
-// ----- Cache -----
-const cache = new LRUCache({
-  max: CACHE_MAX,
-  ttl: CACHE_TTL_MS
-});
-
-// ----- Helpers -----
-function isValidUrl(u) {
-  try {
-    const x = new URL(u);
-    return ["http:", "https:"].includes(x.protocol);
-  } catch {
-    return false;
-  }
-}
-
-const defaultUA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-
-async function renderWithBrowser(targetUrl) {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-features=Translate,BackForwardCache"]
-  });
-  try {
-    const context = await browser.newContext({
-      userAgent: defaultUA,
-      viewport: { width: 1366, height: 900 },
-      javaScriptEnabled: true,
-      locale: "nl-NL",
-      extraHTTPHeaders: {
-        "Accept-Language": "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Upgrade-Insecure-Requests": "1"
-      }
-    });
-
-    const page = await context.newPage();
-
-    // Blokkeer zware assets voor snelheid
-    await page.route("**/*", route => {
-      const type = route.request().resourceType();
-      if (["image", "font", "media"].includes(type)) return route.abort();
-      return route.continue();
-    });
-
-    page.setDefaultNavigationTimeout(NAV_TIMEOUT_MS);
-    await page.goto(targetUrl, { waitUntil: WAIT_UNTIL });
-
-    // Wacht een tik voor late JS
-    await page.waitForTimeout(Math.min(2000, RENDER_TIMEOUT_MS));
-
-    // Strip script tags → statische snapshot
-    await page.addScriptTag({
-      content: `
-        (function(){
-          const scripts = document.querySelectorAll('script');
-          scripts.forEach(s => s.remove());
-        })();
-      `
-    });
-
-    const html = await page.content();
-    return html;
-  } finally {
-    await browser.close();
-  }
-}
-
-async function fetchRaw(targetUrl) {
-  // Snel pad zonder JS-rendering
-  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
-  const context = await browser.newContext({ userAgent: defaultUA, javaScriptEnabled: false });
-  const page = await context.newPage();
-  try {
-    const resp = await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
-    if (!resp) throw new Error("No response");
-    const body = await resp.text();
-    return body;
-  } finally {
-    await browser.close();
-  }
-}
-
-// ----- Endpoints -----
+// --- Healthcheck
 app.get("/health", (req, res) => {
-  res.json({
-    ok: true,
-    cache: { size: cache.size, ttlMs: CACHE_TTL_MS },
-    rateLimitPerMin: RATE_PER_MIN,
-    waitUntil: WAIT_UNTIL
-  });
+  res.status(200).json({ ok: true, t: Date.now() });
 });
 
-app.get("/raw", async (req, res) => {
-  const url = String(req.query.url || "");
-  if (!isValidUrl(url)) return res.status(400).json({ error: "Invalid URL" });
+// --- Rate limiting om misbruik te voorkomen
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60, // 60 requests per minuut per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
 
-  const key = `raw:${url}`;
-  const cached = cache.get(key);
-  if (cached) return res.type("text/html; charset=utf-8").send(cached);
-
-  try {
-    const html = await pRetry(() => fetchRaw(url), { retries: 1, minTimeout: 300 });
-    cache.set(key, html);
-    res.type("text/html; charset=utf-8").send(html);
-  } catch (e) {
-    res.status(502).json({ error: "Fetch failed", detail: e.message });
-  }
+// --- Eenvoudige HTML cache
+const cache = new LRU({
+  max: 200,
+  ttl: 5 * 60 * 1000, // 5 minuten
 });
 
+// --- Snapshot endpoint
 app.get("/snapshot", async (req, res) => {
-  const url = String(req.query.url || "");
-  if (!isValidUrl(url)) return res.status(400).json({ error: "Invalid URL" });
+  const targetUrl = req.query.url;
+  if (!targetUrl) {
+    return res.status(400).json({ error: "Missing ?url=" });
+  }
 
-  const key = `snap:${url}`;
-  const cached = cache.get(key);
-  if (cached) return res.type("text/html; charset=utf-8").send(cached);
+  // Cache hit?
+  const cached = cache.get(targetUrl);
+  if (cached) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=60");
+    return res.status(200).send(cached);
+  }
 
   try {
-    const html = await pRetry(() => renderWithBrowser(url), { retries: 1, minTimeout: 500 });
-    cache.set(key, html);
-    res.type("text/html; charset=utf-8").send(html);
-  } catch (e) {
-    res.status(502).json({ error: "Snapshot failed", detail: e.message });
+    const html = await pRetry(
+      async () => {
+        const browser = await chromium.launch({
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+          headless: true,
+        });
+        try {
+          const context = await browser.newContext({
+            userAgent:
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+            locale: "nl-NL",
+            extraHTTPHeaders: {
+              "Accept-Language": "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7",
+              Accept:
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          });
+          const page = await context.newPage();
+
+          // Timeouts en laadstrategie
+          await page.goto(targetUrl, {
+            waitUntil: "domcontentloaded",
+            timeout: 30000,
+          });
+
+          // Wacht nog kort op late content (optioneel tunen)
+          await page.waitForTimeout(1000);
+
+          // Strip eventueel script-tags als je “pure” HTML wil
+          // await page.addScriptTag({ content: "document.querySelectorAll('script').forEach(s => s.remove());" });
+
+          const content = await page.content();
+
+          await context.close();
+          await browser.close();
+          return content;
+        } catch (err) {
+          await browser.close().catch(() => {});
+          throw err;
+        }
+      },
+      {
+        retries: 2, // totaal 3 pogingen
+        minTimeout: 500,
+        maxTimeout: 1500,
+      }
+    );
+
+    cache.set(targetUrl, html);
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=60");
+    return res.status(200).send(html);
+  } catch (err) {
+    // CORS-safe foutmelding
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    console.error("[snapshot:error]", err.message);
+    return res.status(502).json({ error: "Snapshot failed", detail: err.message });
   }
 });
 
-// ----- Start -----
+// --- Poort en start
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Sloth Proxy v2 listening on :${PORT}`);
+  console.log(`SlothProxyV2 listening on :${PORT}`);
 });
