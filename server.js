@@ -69,7 +69,7 @@
 
           // 🕵️ Simuleer menselijk gedrag
           await page.mouse.move(100, 100);
-          await page.mouse.wheel({ deltaY: 300 });
+          await page.mouse.wheel(0, 300); // ✅ Correcte syntax
           await page.waitForTimeout(500);
 
           await page.goto(targetUrl, {
@@ -81,7 +81,6 @@
           await page.waitForTimeout(1000);
 
           const content = await page.content();
-
           await context.close();
           await browser.close();
           return content;
@@ -89,11 +88,7 @@
           await browser.close().catch(() => {});
           throw err;
         }
-      }, {
-        retries: 2,
-        minTimeout: 500,
-        maxTimeout: 1500,
-      });
+      }, { retries: 2, minTimeout: 500, maxTimeout: 1500 });
 
       cache.set(targetUrl, html);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
