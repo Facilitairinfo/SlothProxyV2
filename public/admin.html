@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <title>SlothProxyV2 Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 16px; }
+    #pickerPanel button { margin: 2px 4px; }
+    iframe { width: 100%; height: 70vh; border: 1px solid #ccc; }
+    pre { background: #f7f7f7; padding: 8px; overflow: auto; }
+    .hint { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>SlothProxyV2 Admin</h1>
+
+  <div>
+    <input id="targetUrl" placeholder="https://www.nen.nl/nieuws" size="60"/>
+    <button id="loadBtn">Laad snapshot</button>
+  </div>
+
+  <div id="pickerPanel" style="margin:8px 0;"></div>
+  <div class="hint">Klik in de pagina om de selector voor het actieve veld te kiezen.</div>
+
+  <h3>Selectors</h3>
+  <pre id="selectorsOut"></pre>
+
+  <button id="previewBtn">Preview extractie</button>
+  <h3>Preview</h3>
+  <pre id="previewOut"></pre>
+
+  <button id="saveBtn">Genereer opslaan-payload</button>
+  <h3>Opslaan payload (plakken in configs/sites.json)</h3>
+  <pre id="saveOut"></pre>
+
+  <iframe id="snapshotView"></iframe>
+
+<script>
+const proxyBase = location.origin; // zelfde host
+let currentUrl = "";
+let selectors = {
+  list: "",
+  title: "",
+  link: "",
+  date: "",
+  summary: "",
+  image: ""
+};
+
+function cssPath(el) {
+  if (!(el instanceof Element)) return "";
+  const path = [];
+  let depth = 0;
+  while (el && el.nodeType === Node.ELEMENT_NODE && depth < 6) {
+    let selector = el.nodeName.toLowerCase();
+    if (el.id) { selector += "#" + el.id; path.unshift(selector); break; }
+    let sib = el, nth = 1;
+    while ((sib = sib.previousElementSibling)) if (sib.nodeName.toLowerCase() === selector) nth++;
+    if (nth > 1) selector += `:nth-of-type(${nth})`;
+    path.unshift(selector);
+    el = el.parentElement;
+    depth++;
+  }
+  return path.join(" > ");
+}
+
+function renderSelectors() {
+  document.getElementById("selectorsOut").textContent = JSON.stringify(selectors, null, 2);
+}
+
+function enablePickMode(doc) {
+  let activeField = "list";
+  const fields = ["list","title","link","date","summary","image"];
+  const panel = document.getElementById("pickerPanel");
+  panel.innerHTML = fields.map(k => `<button data-field="${k}">${k}</button>`).join(" ");
+  panel.querySelectorAll("[data-field]").forEach(btn => {
+    btn.onclick = () => {
+      panel.querySelectorAll("[data-field]").forEach(x => x.style.fontWeight = "400");
+      btn.style.fontWeight = "700";
+      activeField = btn.dataset.field;
+    };
+  });
+  panel.querySelector('[data-field="list"]').style.fontWeight = "700";
+
+  doc.addEventListener("mouseover", e => { e.target.style.outline = "2px solid #44f"; }, true);
+  doc.addEventListener("mouseout", e => { e.target.style.outline = ""; }, true);
+  doc.addEventListener("click", e => {
+    e.preventDefault(); e.stopPropagation();
+    const sel = cssPath(e.target);
+    selectors[activeField] = sel;
+    renderSelectors();
+  }, true);
+}
+
+async function loadSnapshot(url) {
+  currentUrl = url;
+  const iframe = document.getElementById("snapshotView");
+  iframe.src = `${proxyBase}/snapshot?url=${encodeURIComponent(url)}`;
+  iframe.onload = () => {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    enablePickMode(doc);
+  };
+}
+
+async function previewExtraction() {
+  if (!currentUrl) return;
+  const r = await fetch(`${proxyBase}/extract`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ url: currentUrl, selectors })
+  });
+  const data = await r.json();
+  document.getElementById("previewOut").textContent = JSON.stringify(data, null, 2);
+}
+
+function showSavePayload() {
+  const siteKey = new URL(currentUrl).host.replace(/\W+/g, "_");
+  const payload = {
+    [siteKey]: {
+      label: siteKey,
+      startUrl: currentUrl,
+      siteBase: new URL(currentUrl).origin,
+      selectors,
+      dateFormat: "auto"
+    }
+  };
+  document.getElementById("saveOut").textContent = JSON.stringify(payload, null, 2);
+}
+
+document.getElementById("loadBtn").onclick = () => loadSnapshot(document.getElementById("targetUrl").value);
+document.getElementById("previewBtn").onclick = previewExtraction;
+document.getElementById("saveBtn").onclick = showSavePayload;
+renderSelectors();
+</script>
+</body>
+</html>
