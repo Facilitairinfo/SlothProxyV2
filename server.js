@@ -69,13 +69,18 @@
 
           // 🕵️ Simuleer menselijk gedrag
           await page.mouse.move(100, 100);
-          await page.mouse.wheel(0, 300); // ✅ Correcte syntax
+          await page.mouse.wheel(0, 300);
           await page.waitForTimeout(500);
 
-          await page.goto(targetUrl, {
-            waitUntil: "networkidle",
-            timeout: 30000,
-          });
+          await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+
+          // 🍪 Cookiebot wegklikken
+          await page.waitForSelector('button:has-text("Accepteren")', { timeout: 5000 }).catch(() => {});
+          const acceptButton = await page.$('button:has-text("Accepteren")');
+          if (acceptButton) {
+            await acceptButton.click();
+            await page.waitForTimeout(1000);
+          }
 
           await page.waitForSelector("body", { timeout: 5000 });
           await page.waitForTimeout(1000);
