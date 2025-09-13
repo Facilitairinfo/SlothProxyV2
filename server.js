@@ -5,21 +5,17 @@
   const morgan = require("morgan");
   const rateLimit = require("express-rate-limit");
   const { LRUCache } = require("lru-cache");
-  const { chromium } = require("playwright");
+  const { chromium } = require("playwright-extra");
+  const stealth = require("playwright-extra-plugin-stealth")();
   const pRetry = await import("p-retry").then(mod => mod.default);
+
+  chromium.use(stealth);
 
   const app = express();
 
   app.use(compression());
   app.use(morgan("tiny"));
-  app.use(
-    cors({
-      origin: "*",
-      methods: ["GET", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Accept"],
-      maxAge: 600,
-    })
-  );
+  app.use(cors({ origin: "*", methods: ["GET", "OPTIONS"] }));
 
   app.get("/health", (req, res) => {
     res.status(200).json({ ok: true, t: Date.now() });
@@ -33,73 +29,64 @@
   });
   app.use(limiter);
 
-  const cache = new LRUCache({
-    max: 200,
-    ttl: 5 * 60 * 1000,
-  });
+  const cache = new LRUCache({ max: 200, ttl: 5 * 60 * 1000 });
 
   app.get("/snapshot", async (req, res) => {
     const targetUrl = req.query.url;
-    if (!targetUrl) {
-      return res.status(400).json({ error: "Missing ?url=" });
-    }
+    if (!targetUrl) return res.status(400).json({ error: "Missing ?url=" });
 
     const cached = cache.get(targetUrl);
     if (cached) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=60");
       return res.status(200).send(cached);
     }
 
     try {
-      const html = await pRetry(
-        async () => {
-          const browser = await chromium.launch({
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-            headless: true,
+      const html = await pRetry(async () => {
+        const browser = await chromium.launch({
+          headless: true,
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        });
+
+        try {
+          const context = await browser.newContext({
+            userAgent:
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+            locale: "nl-NL",
           });
 
-          try {
-            const context = await browser.newContext({
-              userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-              locale: "nl-NL",
-              extraHTTPHeaders: {
-                "Accept-Language": "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7",
-                Accept:
-                  "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Cache-Control": "no-cache",
-                Pragma: "no-cache",
-              },
-            });
+          const page = await context.newPage();
 
-            const page = await context.newPage();
-            await page.goto(targetUrl, {
-              waitUntil: "domcontentloaded",
-              timeout: 30000,
-            });
+          // Simuleer menselijk gedrag
+          await page.mouse.move(100, 100);
+          await page.mouse.wheel({ deltaY: 300 });
+          await page.waitForTimeout(500);
 
-            await page.waitForTimeout(1000);
-            const content = await page.content();
+          await page.goto(targetUrl, {
+            waitUntil: "networkidle",
+            timeout: 30000,
+          });
 
-            await context.close();
-            await browser.close();
-            return content;
-          } catch (err) {
-            await browser.close().catch(() => {});
-            throw err;
-          }
-        },
-        {
-          retries: 2,
-          minTimeout: 500,
-          maxTimeout: 1500,
+          await page.waitForSelector("body", { timeout: 5000 });
+          await page.waitForTimeout(1000);
+
+          const content = await page.content();
+
+          await context.close();
+          await browser.close();
+          return content;
+        } catch (err) {
+          await browser.close().catch(() => {});
+          throw err;
         }
-      );
+      }, {
+        retries: 2,
+        minTimeout: 500,
+        maxTimeout: 1500,
+      });
 
       cache.set(targetUrl, html);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=60");
       return res.status(200).send(html);
     } catch (err) {
       res.setHeader("Access-Control-Allow-Origin", "*");
