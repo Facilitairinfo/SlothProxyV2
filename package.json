@@ -1,8 +1,8 @@
 {
   "name": "slothproxyv2",
   "version": "2.0.0",
+  "type": "module",
   "main": "server.js",
-  "type": "commonjs",
   "engines": {
     "node": ">=18"
   },
