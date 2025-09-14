@@ -12,7 +12,7 @@ RUN npm install --omit=dev
 COPY . .
 
 # ✅ Zorg dat public/index.html expliciet wordt meegenomen
-COPY public/ public/
+COPY public/index.html public/index.html
 
 # Stel omgevingsvariabelen in
 ENV NODE_ENV=production
