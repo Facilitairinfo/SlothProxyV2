@@ -19,7 +19,6 @@
     "lru-cache": "^10.2.0",
     "morgan": "^1.10.0",
     "p-retry": "^6.2.0",
-    "playwright-extra": "^4.3.6",
-    "playwright-extra-plugin-stealth": "^2.4.10"
+    "playwright-extra": "^4.3.6"
   }
 }
