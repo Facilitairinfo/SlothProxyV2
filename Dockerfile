@@ -1,7 +1,7 @@
 # Gebruik Playwright-ready image
 FROM mcr.microsoft.com/playwright:v1.55.0-jammy
 
-# Werkdirectory in container
+# Stel werkdirectory in
 WORKDIR /app
 
 # Installeer dependencies
@@ -14,7 +14,7 @@ COPY . .
 # ✅ Zorg dat public/index.html expliciet wordt meegenomen
 COPY public/ public/
 
-# Omgevingsvariabelen
+# Stel omgevingsvariabelen in
 ENV NODE_ENV=production
 ENV PORT=8080
 
