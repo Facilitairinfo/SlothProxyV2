@@ -14,23 +14,17 @@ import { getActiveSites, getSiteByKey, touchLastUpdated } from './supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
+
 app.use(compression());
 app.use(morgan('tiny'));
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'OPTIONS'] }));
 app.use(express.json({ limit: '1mb' }));
-
-// Static cockpit
 app.use('/admin', express.static(path.join(__dirname, 'public')));
-
-// Rate limit
 app.use(rateLimit({ windowMs: 60 * 1000, max: 60 }));
 
-// Health
 app.get('/health', (req, res) => res.json({ ok: true, time: Date.now() }));
 
-// Status
 app.get('/status', async (req, res) => {
   try {
     const sites = await getActiveSites();
@@ -40,7 +34,6 @@ app.get('/status', async (req, res) => {
   }
 });
 
-// Fallback config loader
 function loadLocalSites() {
   try {
     const raw = fs.readFileSync(path.join(__dirname, 'configs', 'sites.json'), 'utf-8');
@@ -50,7 +43,6 @@ function loadLocalSites() {
   }
 }
 
-// Config resolvers
 async function resolveSiteConfig(siteKey) {
   try {
     const site = await getSiteByKey(siteKey);
@@ -67,7 +59,6 @@ async function resolveActiveSites() {
   return loadLocalSites().filter(s => s.active !== false);
 }
 
-// Snapshot cache
 const snapshotCache = new LRUCache({ max: 200, ttl: 5 * 60 * 1000 });
 
 app.get('/snapshot', async (req, res) => {
@@ -93,7 +84,6 @@ app.get('/snapshot', async (req, res) => {
   }
 });
 
-// Extract cache
 const extractCache = new LRUCache({ max: 200, ttl: 2 * 60 * 1000 });
 
 app.post('/extract', async (req, res) => {
@@ -132,7 +122,6 @@ app.post('/extract', async (req, res) => {
   }
 });
 
-// RSS endpoint
 app.get('/rss', async (req, res) => {
   const siteKey = req.query.site;
   if (!siteKey) return res.status(400).send('Missing ?site=');
@@ -159,9 +148,9 @@ app.get('/rss', async (req, res) => {
     }).join('\n');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${cfg.label || siteKey}</title><link>${cfg.url}</link><description>Auto-generated feed</description><lastBuildDate>${now}</lastBuildDate>${itemsXml}</channel></rss>`;
+
     res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
     res.status(200).send(xml);
-
     await touchLastUpdated(siteKey);
   } catch (err) {
     console.error('[rss:error]', err);
@@ -169,7 +158,6 @@ app.get('/rss', async (req, res) => {
   }
 });
 
-// Sites overview
 app.get('/sites', async (req, res) => {
   try {
     const sites = await resolveActiveSites();
@@ -179,7 +167,6 @@ app.get('/sites', async (req, res) => {
   }
 });
 
-// Cron endpoint
 app.post('/cron', async (req, res) => {
   const secret = req.query.secret || req.get('x-cron-secret');
   if (!secret || secret !== process.env.CRON_SECRET) return res.status(401).json({ error: 'Unauthorized' });
@@ -193,6 +180,5 @@ app.post('/cron', async (req, res) => {
   }
 });
 
-// Start server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`SlothProxyV2 listening on :${PORT}`));
