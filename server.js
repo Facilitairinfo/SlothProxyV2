@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { LRUCache } from 'lru-cache';
 import { chromium } from 'playwright-extra';
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { getActiveSites, getSiteByKey, touchLastUpdated } from './supabase.js';
@@ -24,15 +24,6 @@ app.use('/admin', express.static(path.join(__dirname, 'public')));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 60 }));
 
 app.get('/health', (req, res) => res.json({ ok: true, time: Date.now() }));
-
-app.get('/status', async (req, res) => {
-  try {
-    const sites = await getActiveSites();
-    res.json({ ok: true, activeSites: sites.map(s => s.siteKey), count: sites.length });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
 
 function loadLocalSites() {
   try {
@@ -99,7 +90,7 @@ app.post('/extract', async (req, res) => {
     if (!snapRes.ok) return res.status(502).json({ error: 'snapshot_failed', status: snapRes.status });
 
     const html = await snapRes.text();
-    const $ = cheerio.load(html);
+    const $ = load(html);
     const items = [];
 
     $(selectors.list).each((_, el) => {
