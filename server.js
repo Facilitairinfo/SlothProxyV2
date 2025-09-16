@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { LRUCache } from 'lru-cache';
 import { chromium } from 'playwright-extra';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { getActiveSites, getSiteByKey, touchLastUpdated } from './supabase.js';
