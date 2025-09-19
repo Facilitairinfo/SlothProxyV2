@@ -1,0 +1,13 @@
+name: Hourly Feed Refresh
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Elke uur (UTC)
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger SlothProxyV2 cron
+        run: |
+          curl -X POST "https://organic-eagles-7y4quopx9436p-8080.app.github.dev/cron?secret=slothproxy-secret-2025"
