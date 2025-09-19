@@ -1,24 +1,25 @@
 {
   "name": "slothproxyv2",
-  "version": "2.0.0",
+  "version": "0.0.0",
   "type": "module",
-  "main": "server.js",
-  "engines": {
-    "node": ">=18"
-  },
+  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js"
+    "dev": "NODE_ENV=development node server.js",
+    "start": "NODE_ENV=production node server.js"
   },
   "dependencies": {
-    "cheerio": "^1.0.0",
+    "@supabase/supabase-js": "^2.45.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "lru-cache": "^10.2.0",
     "morgan": "^1.10.0",
-    "p-retry": "^6.2.0",
-    "playwright-extra": "^4.3.6"
+    "node-fetch": "^3.3.2"
+  },
+  "optionalDependencies": {
+    "playwright-extra": "^4.3.6",
+    "playwright-extra-plugin-stealth": "^2.11.2",
+    "p-retry": "^6.2.0"
   }
 }
