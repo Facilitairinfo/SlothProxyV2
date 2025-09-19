@@ -14,8 +14,9 @@ import { getActiveSites, getSiteByKey, touchLastUpdated } from './supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const app = express();
 
+const app = express();
+app.set('trust proxy', true); // ✅ Fix voor X-Forwarded-For fout
 app.use(compression());
 app.use(morgan('tiny'));
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'OPTIONS'] }));
@@ -132,6 +133,7 @@ app.get('/rss', async (req, res) => {
 
     const now = new Date().toUTCString();
     const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
     const itemsXml = (data.items || []).map(it => {
       const pubDate = it.date ? new Date(it.date).toUTCString() : now;
       const enclosure = it.image ? `<enclosure url="${esc(it.image)}" type="image/jpeg" />` : '';
