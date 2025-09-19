@@ -14,8 +14,8 @@ import { getActiveSites, getSiteByKey, touchLastUpdated } from './supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
+
 app.set('trust proxy', true); // ✅ Fix voor X-Forwarded-For fout
 app.use(compression());
 app.use(morgan('tiny'));
@@ -102,6 +102,7 @@ app.post('/extract', async (req, res) => {
       const date = new Date(dateRaw).toISOString();
       const summary = $el.find(selectors.summary).text().trim();
       const image = new URL($el.find(selectors.image).attr('src') || '', url).toString();
+
       if (title && link) items.push({ title, link, date, summary, image });
     });
 
@@ -133,7 +134,6 @@ app.get('/rss', async (req, res) => {
 
     const now = new Date().toUTCString();
     const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-
     const itemsXml = (data.items || []).map(it => {
       const pubDate = it.date ? new Date(it.date).toUTCString() : now;
       const enclosure = it.image ? `<enclosure url="${esc(it.image)}" type="image/jpeg" />` : '';
@@ -157,6 +157,27 @@ app.get('/sites', async (req, res) => {
     res.json({ count: sites.length, sites });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/status', async (req, res) => {
+  try {
+    const sites = await resolveActiveSites();
+    const statusList = sites.map(site => ({
+      siteKey: site.siteKey,
+      label: site.label || site.siteKey,
+      lastUpdated: site.lastUpdated || null,
+      url: site.url,
+      active: site.active !== false
+    }));
+    res.json({
+      ok: true,
+      count: statusList.length,
+      updated: new Date().toISOString(),
+      sites: statusList
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'status_failed', detail: String(err) });
   }
 });
 
