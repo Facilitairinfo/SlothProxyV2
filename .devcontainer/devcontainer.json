@@ -2,9 +2,9 @@
   "name": "SlothProxyV2 Dev",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "remoteEnv": {
-    "SUPABASE_URL": "https://your-project.supabase.co",
-    "SUPABASE_ANON_KEY": "your-anon-key",
-    "SUPABASE_SERVICE_KEY": "your-service-role-key",
+    "SUPABASE_URL": "https://feylgjuuqmqujtlwwfza.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleWxnanV1cW1xdWp0bHd3ZnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MzMxMzQsImV4cCI6MjA3MzQwOTEzNH0.OebdmT9Hy3byfkGkk4Pac5Mo1qZUzGW2A1RvHquT-i0",
+    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleWxnanV1cW1xdWp0bHd3ZnphIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzgzMzEzNCwiZXhwIjoyMDczNDA5MTM0fQ.8wHWyjNrwLhe_Uh9hq2-AN7dqse1TTBXZ5qCC0vD9mc",
     "CRON_SECRET": "slothproxy-secret-2025",
     "PORT": "8080",
     "ALLOW_ORIGIN": "*",
