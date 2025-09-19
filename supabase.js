@@ -1,46 +1,46 @@
 // supabase.js
-import { createClient } from @supabase/supabase-js;
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const anonKey = process.env.SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-// Public client (read)
-export const supabase = createClient(supabaseUrl, anonKey);
+let supabase = null;
+let supabaseAdmin = null;
 
-// Service client (write)
-export const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+  supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+}
 
-// Fetch all active sites
 export async function getActiveSites() {
+  if (!supabase) return [];
   const { data, error } = await supabase
     .from('sites')
-    .select('*')
+    .select('siteKey,label,url,active,lastUpdated')
     .eq('active', true);
-
   if (error) throw error;
   return data || [];
 }
 
-// Fetch a single site by siteKey
 export async function getSiteByKey(siteKey) {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('sites')
-    .select('*')
+    .select('siteKey,label,url,active,lastUpdated')
     .eq('siteKey', siteKey)
-    .limit(1)
-    .maybeSingle();
-
+    .single();
   if (error) throw error;
   return data || null;
 }
 
-// Update lastUpdated for a site
 export async function touchLastUpdated(siteKey) {
+  if (!supabaseAdmin) return;
   const { error } = await supabaseAdmin
     .from('sites')
     .update({ lastUpdated: new Date().toISOString() })
     .eq('siteKey', siteKey);
-
   if (error) throw error;
 }
