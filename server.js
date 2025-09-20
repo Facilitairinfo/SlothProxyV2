@@ -52,9 +52,14 @@ app.get('/status', async (req, res) => {
     });
   } catch (err) {
     console.error('[status:error]', err);
-    res.status(500).json({ ok: false, error: 'status_failed', detail: String(err) });
+    res.status(500).json({
+      ok: false,
+      error: 'status_failed',
+      detail: JSON.stringify(err, Object.getOwnPropertyNames(err))
+    });
   }
 });
+
 
 const cache = new LRUCache({ max: 200, ttl: 5 * 60 * 1000 });
 
