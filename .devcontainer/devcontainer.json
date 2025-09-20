@@ -1,10 +1,27 @@
 {
   "name": "SlothProxyV2 Dev",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-playwright",
+  "remoteUser": "node",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "SlothProxyV2",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
   "remoteEnv": {
     "SUPABASE_URL": "https://feylgjuuqmqujtlwwfza.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleWxnanV1cW1xdWp0bHd3ZnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MzMxMzQsImV4cCI6MjA3MzQwOTEzNH0.OebdmT9Hy3byfkGkk4Pac5Mo1qZUzGW2A1RvHquT-i0",
-    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleWxnanV1cW1xdWp0bHd3ZnphIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzgzMzEzNCwiZXhwIjoyMDczNDA5MTM0fQ.8wHWyjNrwLhe_Uh9hq2-AN7dqse1TTBXZ5qCC0vD9mc",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "CRON_SECRET": "slothproxy-secret-2025",
     "PORT": "8080",
     "ALLOW_ORIGIN": "*",
@@ -15,29 +32,5 @@
     "RENDER_TIMEOUT_MS": "15000",
     "NAV_TIMEOUT_MS": "25000",
     "WAIT_UNTIL": "networkidle"
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {},
-    "ghcr.io/devcontainers/features/playwright:1": {
-      "installDeps": true
-    }
-  },
-  "forwardPorts": [8080],
-  "portsAttributes": {
-    "8080": {
-      "label": "SlothProxyV2",
-      "onAutoForward": "openPreview"
-    }
-  },
-  "postCreateCommand": "npm install && npx playwright install",
-  "customizations": {
-    "vscode": {
-      "settings": {},
-      "extensions": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode"
-      ]
-    }
-  },
-  "remoteUser": "node"
+  }
 }
