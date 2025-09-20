@@ -16,6 +16,12 @@
     "NAV_TIMEOUT_MS": "25000",
     "WAIT_UNTIL": "networkidle"
   },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/playwright:1": {
+      "installDeps": true
+    }
+  },
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
@@ -23,7 +29,7 @@
       "onAutoForward": "openPreview"
     }
   },
-  "postCreateCommand": "npm install",
+  "postCreateCommand": "npm install && npx playwright install",
   "customizations": {
     "vscode": {
       "settings": {},
@@ -32,5 +38,6 @@
         "esbenp.prettier-vscode"
       ]
     }
-  }
+  },
+  "remoteUser": "node"
 }
