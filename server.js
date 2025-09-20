@@ -42,13 +42,16 @@ app.get('/health', (req, res) => {
 app.get('/status', async (req, res) => {
   try {
     const sites = await getActiveSites();
+    console.log('[status] Supabase returned:', sites);
+
     const statusList = (sites || []).map(s => ({
       siteKey: s.siteKey,
       label: s.label || s.siteKey,
       url: s.url,
-      active: s.active !== false,
+      active: s.active === true,
       lastUpdated: s.lastUpdated || null
     }));
+
     res.status(200).json({
       ok: true,
       count: statusList.length,
@@ -153,5 +156,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`SlothProxyV2 listening on :${PORT}`);
+  console.log(`✅ SlothProxyV2 is actief op poort ${PORT}`);
 });
