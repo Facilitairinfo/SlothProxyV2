@@ -1,92 +1,34 @@
-// server.js
 import express from 'express';
-import compression from 'compression';
 import cors from 'cors';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import { LRUCache } from 'lru-cache';
-import { getActiveSites } from './supabase.js';
-
-if (process.env.NODE_ENV !== 'production') {
-  try {
-    const { default: dotenv } = await import('dotenv');
-    dotenv.config();
-  } catch {}
-}
+import { snapshot } from './snapshot.js';
+import { search } from './search.js';
+import { page } from './page.js';
+import { fetchSites } from './supabase.js';
 
 const app = express();
-app.set('trust proxy', 1);
-app.use(compression());
-app.use(morgan('tiny'));
-app.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
-app.use(rateLimit({
-  windowMs: 60_000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false
-}));
+const PORT = process.env.PORT || 8080;
 
-app.get('/', (req, res) => {
-  res.status(200).json({
-    ok: true,
-    service: 'SlothProxyV2',
-    endpoints: ['/health', '/status', '/snapshot?url=...'],
-    t: Date.now()
-  });
+app.use(cors());
+app.use(express.json());
+
+app.get('/status', (_, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true, t: Date.now() });
-});
+app.get('/snapshot', snapshot);
+app.get('/search', search);
+app.get('/page', page);
 
-app.get('/status', async (req, res) => {
+// Optional: feed test endpoint
+app.get('/feeds', async (_, res) => {
   try {
-    const sites = await getActiveSites();
-    console.log('[status] Supabase returned:', JSON.stringify(sites, null, 2));
-
-    const statusList = (sites || []).map(s => ({
-      siteKey: s.siteKey,
-      label: s.label || s.siteData?.meta?.label || s.siteKey,
-      url: s.url,
-      active: true,
-      lastUpdated: s.lastUpdated || null
-    }));
-
-    res.status(200).json({
-      ok: true,
-      count: statusList.length,
-      updated: new Date().toISOString(),
-      sites: statusList
-    });
+    const sites = await fetchSites();
+    res.json({ count: sites.length, sites });
   } catch (err) {
-    console.error('[status:error]', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-    res.status(500).json({
-      ok: false,
-      error: 'status_failed',
-      detail: JSON.stringify(err, Object.getOwnPropertyNames(err))
-    });
+    res.status(500).json({ error: 'supabase_error', detail: err.message });
   }
 });
 
-app.use((req, res) => {
-  res.status(404).json({
-    ok: false,
-    error: 'not_found',
-    path: req.path,
-    hint: 'Probeer /health, /status of /snapshot?url=...'
-  });
-});
-
-app.use((err, req, res, next) => {
-  console.error('[global:error]', err);
-  res.status(500).json({
-    ok: false,
-    error: 'internal_error',
-    detail: String(err)
-  });
-});
-
-const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`✅ SlothProxyV2 is actief op poort ${PORT}`);
+  console.log(`✅ SlothProxyV2 listening on :${PORT}`);
 });
