@@ -20,20 +20,20 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
   console.warn('[supabase] Missing service key — admin updates disabled');
 }
 
+// 🔧 Tijdelijke bypass: haal alles op zonder filtering
 export async function getActiveSites() {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('sites')
-    .select('siteKey,label,url,active,lastUpdated');
+    .select('*');
 
   if (error) {
     console.error('[supabase:getActiveSites:error]', error);
     throw error;
   }
 
-  const filtered = (data || []).filter(s => s.active === true);
-  console.log(`[supabase:getActiveSites] ${filtered.length} active sites`);
-  return filtered;
+  console.log('[supabase:getActiveSites] raw:', JSON.stringify(data, null, 2));
+  return data || [];
 }
 
 export async function getSiteByKey(siteKey) {
