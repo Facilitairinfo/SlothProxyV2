@@ -16,6 +16,13 @@
     "NAV_TIMEOUT_MS": "25000",
     "WAIT_UNTIL": "networkidle"
   },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "SlothProxyV2",
+      "onAutoForward": "openPreview"
+    }
+  },
   "postCreateCommand": "npm install",
   "customizations": {
     "vscode": {
