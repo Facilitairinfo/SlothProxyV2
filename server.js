@@ -46,9 +46,9 @@ app.get('/status', async (req, res) => {
 
     const statusList = (sites || []).map(s => ({
       siteKey: s.siteKey,
-      label: s.label || s.siteKey,
-      url: s.url,
-      active: s.active === true,
+      label: s.label || s.siteData?.meta?.label || s.siteKey,
+      url: s.url || s.siteData?.meta?.link || null,
+      active: true,
       lastUpdated: s.lastUpdated || null
     }));
 
