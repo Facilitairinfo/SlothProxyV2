@@ -24,7 +24,7 @@ export async function getActiveSites() {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('sites')
-    .select('siteKey,label,url,lastUpdated');
+    .select('*'); // Haal alles op, inclusief siteData
 
   if (error) {
     console.error('[supabase:getActiveSites:error]', error);
@@ -39,7 +39,7 @@ export async function getSiteByKey(siteKey) {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('sites')
-    .select('siteKey,label,url,lastUpdated')
+    .select('*')
     .eq('siteKey', siteKey)
     .single();
 
