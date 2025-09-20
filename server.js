@@ -19,7 +19,12 @@ app.set('trust proxy', 1);
 app.use(compression());
 app.use(morgan('tiny'));
 app.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
-app.use(rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false }));
+app.use(rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false
+}));
 
 app.get('/', (req, res) => {
   res.status(200).json({
@@ -51,7 +56,7 @@ app.get('/status', async (req, res) => {
       sites: statusList
     });
   } catch (err) {
-    console.error('[status:error]', err);
+    console.error('[status:error]', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     res.status(500).json({
       ok: false,
       error: 'status_failed',
@@ -60,13 +65,15 @@ app.get('/status', async (req, res) => {
   }
 });
 
-
 const cache = new LRUCache({ max: 200, ttl: 5 * 60 * 1000 });
 
 app.get('/snapshot', async (req, res) => {
   const targetUrl = req.query.url;
   if (!targetUrl) {
-    return res.status(400).json({ error: 'missing_url', hint: 'Gebruik /snapshot?url=https://...' });
+    return res.status(400).json({
+      error: 'missing_url',
+      hint: 'Gebruik /snapshot?url=https://...'
+    });
   }
 
   let chromium, stealthPlugin, pRetry;
@@ -79,7 +86,10 @@ app.get('/snapshot', async (req, res) => {
     chromium.use(stealthPlugin);
     pRetry = retry.default;
   } catch {
-    return res.status(503).json({ error: 'snapshot_unavailable', detail: 'Playwright dependencies ontbreken' });
+    return res.status(503).json({
+      error: 'snapshot_unavailable',
+      detail: 'Playwright dependencies ontbreken'
+    });
   }
 
   const cached = cache.get(targetUrl);
@@ -116,7 +126,10 @@ app.get('/snapshot', async (req, res) => {
     return res.status(200).send(html);
   } catch (err) {
     console.error('[snapshot:error]', err?.message || err);
-    return res.status(502).json({ error: 'snapshot_failed', detail: String(err?.message || err) });
+    return res.status(502).json({
+      error: 'snapshot_failed',
+      detail: String(err?.message || err)
+    });
   }
 });
 
@@ -131,7 +144,11 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error('[global:error]', err);
-  res.status(500).json({ ok: false, error: 'internal_error', detail: String(err) });
+  res.status(500).json({
+    ok: false,
+    error: 'internal_error',
+    detail: String(err)
+  });
 });
 
 const PORT = process.env.PORT || 8080;
