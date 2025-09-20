@@ -42,7 +42,7 @@ app.get('/health', (req, res) => {
 app.get('/status', async (req, res) => {
   try {
     const sites = await getActiveSites();
-    console.log('[status] Supabase returned:', sites);
+    console.log('[status] Supabase returned:', sites); // ← voeg deze regel toe
 
     const statusList = (sites || []).map(s => ({
       siteKey: s.siteKey,
