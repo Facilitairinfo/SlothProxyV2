@@ -24,23 +24,22 @@ export async function getActiveSites() {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('sites')
-    .select('siteKey,label,url,active,lastUpdated');
+    .select('siteKey,label,url,lastUpdated');
 
   if (error) {
     console.error('[supabase:getActiveSites:error]', error);
     throw error;
   }
 
-  const filtered = (data || []).filter(s => s.active === true);
-  console.log('[supabase:getActiveSites] filtered:', JSON.stringify(filtered, null, 2));
-  return filtered;
+  console.log('[supabase:getActiveSites] raw:', JSON.stringify(data, null, 2));
+  return data || [];
 }
 
 export async function getSiteByKey(siteKey) {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('sites')
-    .select('siteKey,label,url,active,lastUpdated')
+    .select('siteKey,label,url,lastUpdated')
     .eq('siteKey', siteKey)
     .single();
 
