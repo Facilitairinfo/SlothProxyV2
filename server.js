@@ -1,8 +1,10 @@
+// server.js
 import express from 'express';
 import cors from 'cors';
 import { snapshot } from './snapshot.js';
 import { search } from './search.js';
 import { page } from './page.js';
+import { feed } from './feed.js';
 import { fetchSites } from './supabase.js';
 
 const app = express();
@@ -18,8 +20,8 @@ app.get('/status', (_, res) => {
 app.get('/snapshot', snapshot);
 app.get('/search', search);
 app.get('/page', page);
+app.get('/feed', feed);
 
-// Optional: feed test endpoint
 app.get('/feeds', async (_, res) => {
   try {
     const sites = await fetchSites();
